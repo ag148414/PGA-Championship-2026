@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PGA Championship Pool 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy-deep: #0a1628;
+  --navy-mid: #112040;
+  --navy-light: #1a3060;
+  --gold: #c8a84b;
+  --gold-light: #e6c96e;
+  --cream: #f0ece0;
+  --cream-dark: #d8d4c4;
+  --red: #c0392b;
+  --cut-grey: #7a8a99;
+}
+body { background: var(--navy-deep); color: var(--cream); font-family: 'Source Sans 3', sans-serif; min-height: 100vh; }
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(200,168,75,0.025) 0px, rgba(200,168,75,0.025) 1px, transparent 1px, transparent 14px),
+    repeating-linear-gradient(-45deg, rgba(200,168,75,0.025) 0px, rgba(200,168,75,0.025) 1px, transparent 1px, transparent 14px);
+}
+.app { max-width: 1100px; margin: 0 auto; padding: 0 16px 60px; position: relative; z-index: 1; }
+
+/* HEADER */
+.header { text-align: center; padding: 40px 0 26px; border-bottom: 1px solid rgba(200,168,75,0.22); margin-bottom: 28px; }
+.header-flag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 12px;
+  border: 1px solid rgba(200,168,75,0.28); padding: 4px 14px; border-radius: 2px;
+}
+.header h1 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(32px, 7vw, 62px);
+  font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--cream); line-height: 1.0;
+}
+.header h1 span { color: var(--gold); }
+.header-badge {
+  display: inline-block; margin-top: 10px;
+  background: var(--gold); color: var(--navy-deep);
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 3px 14px; border-radius: 2px;
+}
+.header-sub { margin-top: 10px; font-size: 12px; color: rgba(240,236,224,0.42); letter-spacing: 1px; }
+.last-updated { font-size: 11px; color: rgba(240,236,224,0.28); margin-top: 5px; }
+
+/* TABS */
+.tabs { display: flex; gap: 2px; margin-bottom: 28px; border-bottom: 1px solid rgba(200,168,75,0.16); flex-wrap: wrap; }
+.tab-btn {
+  background: none; border: none; padding: 10px 15px;
+  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: rgba(240,236,224,0.38); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.18s;
+}
+.tab-btn:hover { color: var(--cream); }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* CARD */
+.card { background: rgba(255,255,255,0.03); border: 1px solid rgba(200,168,75,0.13); border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
+.card-header {
+  background: rgba(200,168,75,0.07); padding: 12px 18px;
+  border-bottom: 1px solid rgba(200,168,75,0.12);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-light); }
+
+/* POOL TABLE */
+.pool-table { width: 100%; border-collapse: collapse; }
+.pool-table th { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(240,236,224,0.35); font-weight: 600; padding: 10px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.pool-table td { padding: 0; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+.participant-row { cursor: pointer; }
+.participant-summary { display: grid; grid-template-columns: 38px 1fr 80px; align-items: center; padding: 13px 14px; gap: 8px; transition: background 0.15s; }
+.participant-summary:hover { background: rgba(200,168,75,0.04); }
+.pos-num { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: var(--gold); text-align: center; }
+.pos-num.p1 { color: #FFD700; } .pos-num.p2 { color: #C0C0C0; } .pos-num.p3 { color: #CD7F32; }
+.p-name { font-size: 15px; font-weight: 600; color: var(--cream); }
+.p-preview { font-size: 11px; color: rgba(240,236,224,0.34); margin-top: 2px; }
+.p-total { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 800; text-align: right; }
+.p-total.under { color: #5cb85c; } .p-total.over { color: var(--red); } .p-total.even { color: var(--cream); }
+
+/* PICKS DETAIL */
+.picks-detail { background: rgba(0,0,0,0.22); border-top: 1px solid rgba(255,255,255,0.05); }
+.picks-inner { padding: 12px 14px 14px 50px; }
+.picks-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(210px,1fr)); gap: 7px; margin-bottom: 8px; }
+.pick-card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07); border-radius: 4px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: flex-start; }
+.pick-card.dropped { opacity: 0.33; border-style: dashed; }
+.pick-card.mc { border-color: rgba(122,138,153,0.22); }
+.pick-name { font-size: 13px; font-weight: 600; color: var(--cream); }
+.pick-detail { font-size: 10px; color: var(--cut-grey); margin-top: 2px; }
+.pick-rounds { font-size: 10px; color: rgba(240,236,224,0.26); margin-top: 2px; font-family: monospace; }
+.pick-score { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; text-align: right; flex-shrink: 0; margin-left: 6px; }
+.pick-score.under { color: #5cb85c; } .pick-score.over { color: var(--red); } .pick-score.even { color: var(--cream-dark); } .pick-score.mc { color: var(--cut-grey); }
+.drop-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: rgba(240,236,224,0.26); margin-top: 2px; text-align: right; }
+.tb-line { font-size: 12px; color: rgba(200,168,75,0.6); margin-top: 5px; }
+
+/* LIVE TABLE */
+.live-table { width: 100%; border-collapse: collapse; }
+.live-table th { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(240,236,224,0.35); font-weight: 600; padding: 9px 13px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.live-table th.r { text-align: right; }
+.live-table td { padding: 9px 13px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--cream); vertical-align: middle; }
+.live-table td.r { text-align: right; font-size: 12px; color: rgba(240,236,224,0.52); }
+.live-table tr:hover td { background: rgba(255,255,255,0.025); }
+.cut-row td { opacity: 0.4; }
+.live-pos { color: rgba(240,236,224,0.4); font-size: 12px; }
+.live-name { font-weight: 600; }
+.score-pill { display: inline-block; padding: 2px 8px; border-radius: 3px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; }
+.score-pill.under { background: rgba(92,184,92,0.13); color: #5cb85c; }
+.score-pill.over { background: rgba(192,57,43,0.13); color: #e74c3c; }
+.score-pill.even { color: var(--cream-dark); }
+.thru-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 700; }
+.thru-badge.active { background: rgba(92,184,92,0.13); color: #5cb85c; }
+.thru-badge.cut { background: rgba(122,138,153,0.18); color: var(--cut-grey); }
+.thru-badge.wd { background: rgba(192,57,43,0.13); color: #e74c3c; }
+
+/* MISC */
+.refresh-btn { background: rgba(200,168,75,0.1); border: 1px solid rgba(200,168,75,0.2); border-radius: 4px; padding: 5px 12px; color: var(--gold); font-size: 11px; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.2s; }
+.refresh-btn:hover { background: rgba(200,168,75,0.18); }
+.refresh-btn:disabled { opacity: 0.38; cursor: default; }
+.spin { animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading { text-align: center; padding: 44px 20px; color: rgba(240,236,224,0.36); }
+.loading .ico { font-size: 26px; display: block; margin-bottom: 10px; animation: spin 1.2s linear infinite; }
+.error-block { text-align: center; padding: 32px 20px; color: #e74c3c; font-size: 14px; }
+
+/* RULES */
+.rules-section { padding: 18px 22px; }
+.rules-section h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gold-light); margin-bottom: 8px; margin-top: 16px; }
+.rules-section h3:first-child { margin-top: 0; }
+.rules-section p, .rules-section li { font-size: 14px; line-height: 1.7; color: rgba(240,236,224,0.68); }
+.rules-section ul { padding-left: 18px; }
+.rules-section li { margin-bottom: 3px; }
+.example-box { background: rgba(200,168,75,0.06); border: 1px solid rgba(200,168,75,0.17); border-radius: 4px; padding: 11px 14px; margin-top: 9px; font-size: 12px; color: rgba(240,236,224,0.58); font-family: monospace; line-height: 1.9; }
+
+/* ADMIN */
+.admin-wrap { padding: 20px; }
+.admin-login { max-width: 300px; margin: 0 auto; text-align: center; }
+.admin-login h3 { font-family: 'Barlow Condensed', sans-serif; color: var(--gold); margin-bottom: 14px; font-size: 22px; letter-spacing: 1px; text-transform: uppercase; }
+input[type="password"], input[type="text"] { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(200,168,75,0.26); border-radius: 4px; padding: 9px 13px; color: var(--cream); font-family: 'Source Sans 3',sans-serif; font-size: 14px; margin-bottom: 10px; outline: none; }
+input[type="password"]:focus, input[type="text"]:focus { border-color: var(--gold); }
+.btn { background: var(--gold); color: var(--navy-deep); border: none; border-radius: 4px; padding: 9px 20px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+.btn:hover { background: var(--gold-light); }
+.btn.danger { background: rgba(192,57,43,0.8); color: white; }
+.btn.danger:hover { background: var(--red); }
+.btn.sm { padding: 5px 12px; font-size: 11px; }
+.err { color: #e74c3c; font-size: 13px; margin-top: 4px; }
+.ok { color: #5cb85c; font-size: 13px; }
+.p-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 5px; padding: 13px 15px; margin-bottom: 10px; }
+.p-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.p-item-name { font-weight: 700; font-size: 14px; color: var(--gold-light); }
+.picks-inputs { display: grid; grid-template-columns: repeat(auto-fill,minmax(175px,1fr)); gap: 6px; }
+.pick-lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(240,236,224,0.36); margin-bottom: 3px; }
+.add-box { background: rgba(200,168,75,0.05); border: 1px dashed rgba(200,168,75,0.26); border-radius: 5px; padding: 14px; margin-bottom: 14px; }
+.add-row { display: flex; gap: 8px; align-items: flex-end; }
+.add-row input { margin-bottom: 0; flex: 1; }
+.upload-zone { border: 2px dashed rgba(200,168,75,0.3); border-radius: 6px; padding: 24px 18px; text-align: center; cursor: pointer; transition: all 0.2s; background: rgba(200,168,75,0.03); margin-bottom: 14px; }
+.upload-zone:hover, .upload-zone.over { border-color: var(--gold); background: rgba(200,168,75,0.08); }
+.upload-zone h4 { font-family: 'Barlow Condensed', sans-serif; color: var(--gold-light); font-size: 16px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+.upload-zone p { font-size: 11px; color: rgba(240,236,224,0.38); }
+.upload-ok { background: rgba(92,184,92,0.07); border: 1px solid rgba(92,184,92,0.2); border-radius: 5px; padding: 12px 14px; margin-bottom: 14px; }
+.upload-ok h4 { color: #5cb85c; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.upload-ok-row { font-size: 12px; color: var(--cream); padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+@media (max-width: 600px) {
+  .participant-summary { grid-template-columns: 32px 1fr 60px; }
+  .picks-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+const ADMIN_PASSWORD = "pga2026";
+const PAR = 70;
+const MC_PENALTY_STROKES = 78;
+const MC_PENALTY_TO_PAR = MC_PENALTY_STROKES - PAR; // +8
+const DROPS = 2;
+const PICKS_PER_PERSON = 8;
+const ESPN_API = "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
+const STORAGE_KEY = "pga-pool-participants-2026";
+
+function fmt(n) {
+  if (n === null || n === undefined) return "-";
+  if (n === 0) return "E";
+  return n > 0 ? "+" + n : "" + n;
+}
+function cls(n) {
+  if (n === null || n === undefined) return "even";
+  if (n < 0) return "under";
+  if (n > 0) return "over";
+  return "even";
+}
+function norm(s) { return (s || "").trim().toLowerCase(); }
+
+function parseESPN(data) {
+  const players = {};
+  const events = data && data.events ? data.events : [];
+  if (!events.length) return players;
+
+  const event = events.find(function(e) {
+    return e.name && (e.name.toLowerCase().includes("pga championship") || e.name.toLowerCase().includes("pga"));
+  }) || events[0];
+  const comps = (event && event.competitions && event.competitions[0] && event.competitions[0].competitors) ? event.competitions[0].competitors : [];
+
+  comps.forEach(function(comp) {
+    const name = (comp.athlete && comp.athlete.displayName) ? comp.athlete.displayName : "";
+    if (!name) return;
+
+    const linescores = comp.linescores || [];
+    const roundStrokes = [null, null, null, null];
+    const roundsTP = [null, null, null, null];
+    let thru = "-";
+    let teeTime = null;
+
+    linescores.forEach(function(ls) {
+      const roundIdx = (ls.period || 1) - 1;
+      if (roundIdx < 0 || roundIdx > 3) return;
+      const innerHoles = ls.linescores || [];
+      const isComplete = innerHoles.length === 18;
+      const dv = String(ls.displayValue != null ? ls.displayValue : "").trim();
+      const dvNum = dv === "E" ? 0 : Number(dv);
+
+      if (isComplete) {
+        const total = innerHoles.reduce(function(a, h) { return a + (Number(h.value) || 0); }, 0);
+        roundStrokes[roundIdx] = total || Number(ls.value);
+        if (!isNaN(dvNum)) roundsTP[roundIdx] = dvNum;
+        thru = "F";
+      } else if (innerHoles.length > 0) {
+        thru = String(innerHoles.length);
+      }
+    });
+
+    try {
+      const stats = (comp.statistics && comp.statistics.categories && comp.statistics.categories[0] && comp.statistics.categories[0].stats) ? comp.statistics.categories[0].stats : [];
+      const teeEntry = stats[stats.length - 1];
+      if (teeEntry && teeEntry.displayValue && /May/i.test(teeEntry.displayValue)) {
+        const d = new Date(teeEntry.displayValue);
+        if (!isNaN(d)) {
+          teeTime = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+        }
+      }
+    } catch(e) {}
+
+    if (thru === "-" && teeTime) thru = teeTime;
+
+    const scoreStr = String(comp.score != null ? comp.score : "").trim();
+    let topar = 0;
+    if (scoreStr === "E") topar = 0;
+    else if (scoreStr !== "" && scoreStr !== "-") {
+      const n = Number(scoreStr);
+      if (!isNaN(n)) topar = n;
+    }
+
+    const statusDetail = (comp.status && comp.status.type && comp.status.type.name) ? comp.status.type.name : "";
+    const isMC = statusDetail.toLowerCase().includes("cut") || statusDetail.toLowerCase().includes("eliminated");
+    const isWD = statusDetail.toLowerCase().includes("withdraw");
+
+    players[norm(name)] = {
+      name: name, pos: (comp.status && comp.status.type && comp.status.type.shortDetail) ? comp.status.type.shortDetail : "-",
+      topar: topar, rounds: roundsTP, strokes: roundStrokes,
+      thru: thru, status: isMC ? "cut" : isWD ? "wd" : "active", teeTime: teeTime,
+    };
+  });
+  return players;
+}
+
+function computePickScore(name, playerMap) {
+  const p = playerMap[norm(name)];
+  if (!p) return { name: name, rounds: [null,null,null,null], total: 0, status: "unknown" };
+  return { name: name, rounds: p.rounds, strokes: p.strokes, total: p.topar, status: p.status, thru: p.thru, pos: p.pos };
+}
+
+function computeParticipantScore(participant, playerMap) {
+  const pickScores = participant.picks.filter(Boolean).map(function(name) { return computePickScore(name, playerMap); });
+  const sorted = pickScores.slice().sort(function(a, b) { return a.total - b.total; });
+  const kept = sorted.slice(0, 6);
+  const droppedNames = new Set(sorted.slice(6).map(function(p) { return p.name; }));
+  const grandTotal = kept.reduce(function(a, p) { return a + p.total; }, 0);
+  return { pickScores: pickScores, droppedNames: droppedNames, grandTotal: grandTotal };
+}
+
+async function parsePicksExcel(file) {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, { type: "array", cellFormula: true, cellNF: false, raw: false });
+        const wsName = wb.SheetNames.includes("My Picks") ? "My Picks" : wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        if (!ws) { reject(new Error("No 'My Picks' sheet found.")); return; }
+
+        function getCellVal(addr) {
+          const cell = ws[addr];
+          if (!cell) return "";
+          const v = cell.v !== undefined && cell.v !== null ? String(cell.v).trim() : "";
+          const w = cell.w !== undefined && cell.w !== null ? String(cell.w).trim() : "";
+          return v || w || "";
+        }
+
+        const participantName = getCellVal("C5");
+        if (!participantName) { reject(new Error("No name in YOUR NAME cell.")); return; }
+        const picks = [];
+        const pickAddrs = ["C8","C9","C10","C11","C12","C13","C14","C15"];
+        for (const addr of pickAddrs) {
+          const val = getCellVal(addr);
+          if (val) picks.push(val);
+        }
+        const tiebreaker = getCellVal("C16") || null;
+        resolve({ name: participantName, picks: picks.concat(Array(PICKS_PER_PERSON).fill("")).slice(0, PICKS_PER_PERSON), tiebreaker: tiebreaker });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+const JSONBIN_BIN_ID = "69d67dd6aaba882197d8b175";
+const JSONBIN_KEY = "$2a$10$ThYZbqfZHSHJybW7JdaBpOWXtrVXjhCkl/HDD.SZBaMeDc1R4LM62";
+const JSONBIN_URL = "https://api.jsonbin.io/v3/b/" + JSONBIN_BIN_ID;
+
+async function loadParticipants() {
+  try {
+    const res = await fetch(JSONBIN_URL + "/latest", {
+      headers: { "X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false" }
+    });
+    if (!res.ok) { return []; }
+    const json = await res.json();
+    return (json.record && json.record.participants) ? json.record.participants : (json.participants || []);
+  } catch (e) { return []; }
+}
+
+async function saveParticipants(data) {
+  try {
+    await fetch(JSONBIN_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_KEY, "X-Bin-Meta": "false" },
+      body: JSON.stringify({ participants: data })
+    });
+  } catch (e) { console.error("Save exception:", e); }
+}
+
+function PGAPool() {
+  const [tab, setTab] = useState("pool");
+  const [participants, setParticipants] = useState([]);
+  const [participantsLoading, setParticipantsLoading] = useState(true);
+  const [playerMap, setPlayerMap] = useState({});
+  const [rawData, setRawData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [adminAuthed, setAdminAuthed] = useState(false);
+  const [adminPw, setAdminPw] = useState("");
+  const [adminErr, setAdminErr] = useState("");
+  const [editP, setEditP] = useState([]);
+  const [newName, setNewName] = useState("");
+  const [saveMsg, setSaveMsg] = useState("");
+  const [uploadResult, setUploadResult] = useState(null);
+  const [uploadErr, setUploadErr] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef(null);
+
+  const fetchScores = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      let data;
+      try {
+        const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=20260514");
+        if (res.ok) data = await res.json();
+      } catch(e) {}
+      if (!data || !data.events || !data.events.length) {
+        const res = await fetch(ESPN_API);
+        if (!res.ok) throw new Error("ESPN API returned " + res.status);
+        data = await res.json();
+      }
+      setRawData(data); setPlayerMap(parseESPN(data)); setLastUpdated(new Date());
+    } catch (e) { setError("Could not load live scores: " + e.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(function() { fetchScores(); }, [fetchScores]);
+
+  useEffect(function() {
+    (async function() {
+      setParticipantsLoading(true);
+      const data = await loadParticipants();
+      setParticipants(data);
+      setParticipantsLoading(false);
+    })();
+  }, []);
+
+  const poolRows = participants.map(function(p) {
+    return Object.assign({}, p, computeParticipantScore(p, playerMap));
+  }).sort(function(a, b) { return a.grandTotal - b.grandTotal; });
+
+  const allPlayers = Object.values(playerMap).sort(function(a, b) { return a.topar - b.topar; });
+
+  function handleLogin() {
+    if (adminPw === ADMIN_PASSWORD) {
+      setAdminAuthed(true); setAdminErr(""); setEditP(JSON.parse(JSON.stringify(participants)));
+    } else setAdminErr("Incorrect password.");
+  }
+
+  async function saveAll() {
+    const cleaned = editP.map(function(p) { return Object.assign({}, p, { picks: p.picks.filter(function(x) { return x && x.trim(); }) }); });
+    setSaveMsg("Saving...");
+    await saveParticipants(cleaned);
+    const confirmed = await loadParticipants();
+    setParticipants(confirmed);
+    setEditP(JSON.parse(JSON.stringify(confirmed)));
+    setSaveMsg("Saved! (" + confirmed.length + " participants)");
+    setTimeout(function() { setSaveMsg(""); }, 4000);
+  }
+
+  function addParticipant() {
+    if (!newName.trim()) return;
+    setEditP(function(prev) { return prev.concat([{ name: newName.trim(), picks: Array(PICKS_PER_PERSON).fill(""), tiebreaker: null }]); });
+    setNewName("");
+  }
+
+  function removePart(idx) { setEditP(function(prev) { return prev.filter(function(_, i) { return i !== idx; }); }); }
+
+  function updatePick(pIdx, pickIdx, val) {
+    setEditP(function(prev) {
+      return prev.map(function(p, i) {
+        if (i !== pIdx) return p;
+        const picks = p.picks.slice(); picks[pickIdx] = val; return Object.assign({}, p, { picks: picks });
+      });
+    });
+  }
+
+  async function handleFile(file) {
+    setUploadErr(""); setUploadResult(null);
+    if (!file) return;
+    try {
+      const result = await parsePicksExcel(file);
+      const existsIdx = editP.findIndex(function(p) { return norm(p.name) === norm(result.name); });
+      if (existsIdx >= 0) {
+        setEditP(function(prev) { return prev.map(function(p, i) { return i === existsIdx ? Object.assign({}, p, { picks: result.picks, tiebreaker: result.tiebreaker }) : p; }); });
+        setUploadResult(Object.assign({}, result, { action: "updated" }));
+      } else {
+        setEditP(function(prev) { return prev.concat([result]); });
+        setUploadResult(Object.assign({}, result, { action: "added" }));
+      }
+    } catch (e) { setUploadErr(e.message || "Could not read file."); }
+  }
+
+  const tournamentName = (rawData && rawData.events && rawData.events[0] && rawData.events[0].name) ? rawData.events[0].name : "2026 PGA Championship";
+
+  const TABS = [
+    { key: "pool",  label: "Pool Standings" },
+    { key: "live",  label: "Live Leaderboard" },
+
+    { key: "admin", label: "Admin" },
+  ];
+
+  return (
+    <div className="app">
+      <div className="header">
+        <div className="header-flag">⛳ Aronimink Golf Club · May 2026</div>
+        <h1>PGA <span>Championship</span> Pool</h1>
+        <div className="header-badge">108th PGA Championship · Newtown Square, PA</div>
+        <div className="header-sub">Pick 8 · Worst 2 Dropped · MC = 78 strokes (+8/round) per unplayed round</div>
+        {lastUpdated && <div className="last-updated">Scores from ESPN · Updated {lastUpdated.toLocaleTimeString()}</div>}
+      </div>
+
+      <div className="tabs">
+        {TABS.map(function(t) {
+          return <button key={t.key} className={"tab-btn" + (tab === t.key ? " active" : "")} onClick={function() { setTab(t.key); }}>{t.label}</button>;
+        })}
+      </div>
+
+      {/* POOL STANDINGS */}
+      {tab === "pool" && (
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Pool Standings</span>
+            <button className="refresh-btn" onClick={fetchScores} disabled={loading}>
+              <span className={loading ? "spin" : ""}>↻</span>{loading ? "Updating…" : "Refresh"}
+            </button>
+          </div>
+          {participantsLoading
+            ? <div className="loading"><span className="ico">⛳</span>Loading pool data…</div>
+            : participants.length === 0
+              ? <div className="loading">No participants yet — add them in Admin.</div>
+              : loading && !Object.keys(playerMap).length
+                ? <div className="loading"><span className="ico">⛳</span>Loading live scores…</div>
+                : (
+                  <table className="pool-table">
+                    <thead><tr><th>#</th><th>Participant</th><th style={{textAlign:"right",paddingRight:14}}>Total</th></tr></thead>
+                    <tbody>
+                      {poolRows.map(function(row, i) {
+                        const isExp = expandedRow === row.name;
+                        const pc = i===0?"p1":i===1?"p2":i===2?"p3":"";
+                        return (
+                          <React.Fragment key={row.name}>
+                            <tr className="participant-row" onClick={function() { setExpandedRow(isExp ? null : row.name); }}>
+                              <td colSpan={3}>
+                                <div className="participant-summary">
+                                  <div className={"pos-num " + pc}>{i+1}</div>
+                                  <div>
+                                    <div className="p-name">
+                                      {row.name}
+                                      {row.tiebreaker && <span style={{fontSize:11,fontWeight:400,color:"rgba(200,168,75,0.65)",marginLeft:8}}>TB: {row.tiebreaker}</span>}
+                                    </div>
+                                    <div className="p-preview">
+                                      {row.picks.filter(Boolean).slice(0,4).join(", ")}{row.picks.filter(Boolean).length > 4 ? "…" : ""}
+                                    </div>
+                                  </div>
+                                  <div className={"p-total " + cls(row.grandTotal)}>{fmt(row.grandTotal)}</div>
+                                </div>
+                              </td>
+                            </tr>
+                            {isExp && (
+                              <tr><td colSpan={3}>
+                                <div className="picks-detail"><div className="picks-inner">
+                                  <div className="picks-grid">
+                                    {row.pickScores.map(function(ps) {
+                                      const dropped = row.droppedNames.has(ps.name);
+                                      const isMC = ps.status === "cut" || ps.status === "wd";
+                                      const rStr = ps.rounds.map(function(r, ri) { return r !== null ? "R" + (ri+1) + ":" + fmt(r) : "R" + (ri+1) + ":-"; }).join(" ");
+                                      return (
+                                        <div key={ps.name} className={"pick-card" + (dropped ? " dropped" : "") + (isMC ? " mc" : "")}>
+                                          <div>
+                                            <div className="pick-name">{ps.name}</div>
+                                            <div className="pick-detail">{isMC ? "MC/WD" : ps.status === "unknown" ? "?" : ps.thru ? "Thru " + ps.thru : ""}</div>
+                                            <div className="pick-rounds">{rStr}</div>
+                                          </div>
+                                          <div>
+                                            <div className={"pick-score " + (isMC ? "mc" : cls(ps.total))}>{fmt(ps.total)}</div>
+                                            {dropped && <div className="drop-label">dropped</div>}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  {row.tiebreaker && <div className="tb-line">Tiebreaker: {row.tiebreaker}</div>}
+                                </div></div>
+                              </td></tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )
+          }
+        </div>
+      )}
+
+      {/* LIVE LEADERBOARD */}
+      {tab === "live" && (
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">{tournamentName}</span>
+            <button className="refresh-btn" onClick={fetchScores} disabled={loading}>
+              <span className={loading ? "spin" : ""}>↻</span>{loading ? "Updating…" : "Refresh"}
+            </button>
+          </div>
+          {loading && !allPlayers.length
+            ? <div className="loading"><span className="ico">⛳</span>Fetching live scores from ESPN…</div>
+            : error ? <div className="error-block">{error}</div>
+            : !allPlayers.length ? <div className="loading">No scores yet — tournament begins May 14.</div>
+            : (
+              <table className="live-table">
+                <thead>
+                  <tr><th style={{width:50}}>Pos</th><th>Player</th><th className="r">Total</th><th className="r">R1</th><th className="r">R2</th><th className="r">R3</th><th className="r">R4</th><th className="r">Thru</th><th className="r">Tee Time</th></tr>
+                </thead>
+                <tbody>
+                  {allPlayers.map(function(p) {
+                    return (
+                      <tr key={p.name} className={p.status==="cut"||p.status==="wd" ? "cut-row" : ""}>
+                        <td className="live-pos">{p.pos}</td>
+                        <td><span className="live-name">{p.name}</span></td>
+                        <td className="r"><span className={"score-pill " + cls(p.topar)}>{fmt(p.topar)}</span></td>
+                        {p.strokes.map(function(s, i) { return <td key={i} className="r" style={{color:"rgba(240,236,224,0.62)"}}>{s !== null ? s : "—"}</td>; })}
+                        <td className="r">
+                          {p.status==="cut" ? <span className="thru-badge cut">CUT</span>
+                          : p.status==="wd" ? <span className="thru-badge wd">WD</span>
+                          : p.thru==="F" ? <span className="thru-badge active">F</span>
+                          : /^\d+$/.test(p.thru) ? <span className="thru-badge active">{p.thru}</span>
+                          : <span style={{fontSize:11,color:"rgba(240,236,224,0.44)"}}>{p.thru||"—"}</span>}
+                        </td>
+                        <td className="r" style={{fontSize:11,color:"rgba(240,236,224,0.44)"}}>
+                          {/\d+:\d+/.test(p.thru||"") ? p.thru : p.teeTime || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )
+          }
+        </div>
+      )}
+
+      {/* ADMIN */}
+      {tab === "admin" && (
+        <div className="card">
+          <div className="card-header"><span className="card-title">Admin</span></div>
+          <div className="admin-wrap">
+            {!adminAuthed ? (
+              <div className="admin-login">
+                <h3>Admin Login</h3>
+                <input type="password" placeholder="Password" value={adminPw}
+                  onChange={function(e) { setAdminPw(e.target.value); }}
+                  onKeyDown={function(e) { if (e.key === "Enter") handleLogin(); }}/>
+                <button className="btn" onClick={handleLogin}>Login</button>
+                {adminErr && <div className="err">{adminErr}</div>}
+              </div>
+            ) : (
+              <div>
+                <div
+                  className={"upload-zone" + (dragOver ? " over" : "")}
+                  onClick={function() { if (fileRef.current) fileRef.current.click(); }}
+                  onDragOver={function(e) { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={function() { setDragOver(false); }}
+                  onDrop={function(e) { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}>
+                  <input ref={fileRef} type="file" accept=".xlsx" style={{display:"none"}}
+                    onChange={function(e) { handleFile(e.target.files[0]); e.target.value = ""; }}/>
+                  <div style={{fontSize:28,marginBottom:8}}>📥</div>
+                  <h4>Drop participant's picks file here</h4>
+                  <p>Or click to browse · Accepts PGA Pool picks template (.xlsx)</p>
+                </div>
+                {uploadErr && <div className="err" style={{marginBottom:12}}>⚠ {uploadErr}</div>}
+                {uploadResult && (
+                  <div className="upload-ok">
+                    <h4>✓ {uploadResult.action === "updated" ? "Updated" : "Added"}: {uploadResult.name}</h4>
+                    {uploadResult.picks.filter(Boolean).map(function(p, i) {
+                      return <div key={i} className="upload-ok-row">Pick {i+1}: {p}</div>;
+                    })}
+                  </div>
+                )}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",color:"var(--gold-light)",fontSize:18,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>
+                    Participants ({editP.length})
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    {saveMsg && <span className={saveMsg.includes("fail") ? "err" : "ok"}>{saveMsg}</span>}
+                    <button className="btn" onClick={saveAll}>Save All</button>
+                  </div>
+                </div>
+                <div className="add-box">
+                  <div style={{fontSize:11,color:"var(--gold)",fontWeight:600,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Add Manually</div>
+                  <div className="add-row">
+                    <input type="text" placeholder="Name…" value={newName}
+                      onChange={function(e) { setNewName(e.target.value); }}
+                      onKeyDown={function(e) { if (e.key === "Enter") addParticipant(); }}/>
+                    <button className="btn" onClick={addParticipant}>Add</button>
+                  </div>
+                </div>
+                {editP.map(function(p, pIdx) {
+                  return (
+                    <div key={pIdx} className="p-item">
+                      <div className="p-item-head">
+                        <div className="p-item-name">
+                          {p.name}
+                          {p.tiebreaker && <span style={{fontSize:11,color:"var(--gold)",marginLeft:8,fontWeight:400}}>TB: {p.tiebreaker}</span>}
+                        </div>
+                        <button className="btn danger sm" onClick={function() { removePart(pIdx); }}>Remove</button>
+                      </div>
+                      <div className="picks-inputs">
+                        {Array(PICKS_PER_PERSON).fill(null).map(function(_, pickIdx) {
+                          return (
+                            <div key={pickIdx}>
+                              <div className="pick-lbl">Pick {pickIdx+1}</div>
+                              <input type="text" placeholder="Golfer name…" value={p.picks[pickIdx] || ""}
+                                onChange={function(e) { updatePick(pIdx, pickIdx, e.target.value); }}/>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{marginTop:14,fontSize:11,color:"rgba(240,236,224,0.28)"}}>💡 Hit Save All after making changes.</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(PGAPool));
+</script>
+</body>
+</html>

@@ -412,6 +412,14 @@ function PGAPool() {
 
   const allPlayers = Object.values(playerMap).sort(function(a, b) { return a.topar - b.topar; });
 
+  const pickCountMap = {};
+  participants.forEach(function(p) {
+    p.picks.filter(Boolean).forEach(function(pick) {
+      const key = norm(pick);
+      pickCountMap[key] = (pickCountMap[key] || 0) + 1;
+    });
+  });
+
   function handleLogin() {
     if (adminPw === ADMIN_PASSWORD) {
       setAdminAuthed(true); setAdminErr(""); setEditP(JSON.parse(JSON.stringify(participants)));
@@ -588,7 +596,14 @@ function PGAPool() {
                     return (
                       <tr key={p.name} className={p.status==="cut"||p.status==="wd" ? "cut-row" : ""}>
                         <td className="live-pos">{p.pos}</td>
-                        <td><span className="live-name">{p.name}</span></td>
+                        <td>
+                          <span className="live-name">{p.name}</span>
+                          {(pickCountMap[norm(p.name)] || 0) > 0 && (
+                            <span className="pick-count-badge" style={{marginLeft:7}} title={(pickCountMap[norm(p.name)]||0) + " picked"}>
+                              {(pickCountMap[norm(p.name)]||0)}×
+                            </span>
+                          )}
+                        </td>
                         <td className="r"><span className={"score-pill " + cls(p.topar)}>{fmt(p.topar)}</span></td>
                         {p.strokes.map(function(s, i) { return <td key={i} className="r" style={{color:"rgba(240,236,224,0.62)"}}>{s !== null ? s : "—"}</td>; })}
                         <td className="r">

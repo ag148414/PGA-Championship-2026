@@ -313,15 +313,16 @@ async function parsePicksExcel(file) {
           return v || w || "";
         }
 
-        const participantName = getCellVal("C5");
+        const participantName = getCellVal("C4") || getCellVal("C5");
         if (!participantName) { reject(new Error("No name in YOUR NAME cell.")); return; }
         const picks = [];
-        const pickAddrs = ["C8","C9","C10","C11","C12","C13","C14","C15"];
+        const pickAddrs = ["C7","C8","C9","C10","C11","C12","C13","C14"];
+        const tiebreakerAddr = "C15";
         for (const addr of pickAddrs) {
           const val = getCellVal(addr);
           if (val) picks.push(val);
         }
-        const tiebreaker = getCellVal("C16") || null;
+        const tiebreaker = getCellVal(tiebreakerAddr) || null;
         resolve({ name: participantName, picks: picks.concat(Array(PICKS_PER_PERSON).fill("")).slice(0, PICKS_PER_PERSON), tiebreaker: tiebreaker });
       } catch (err) { reject(err); }
     };
